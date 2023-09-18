@@ -190,6 +190,38 @@ const fOObAR: Uncapitalize<"FOO BAR"> = "fOO BAR" // 最初の文字 "F" だけ�
 
 ///
 ///
+/// カスタムユーティリティ型 (の例)
+///
+///
+
+// null または undefined または optional であるキーのユニオン型
+type NullableKeys<T> = {
+    [K in keyof T]: undefined extends T[K] ? K : null extends T[K] ? K : never
+}[keyof T]
+let nk: NullableKeys<{ a: N | U; b: N | null; c?: N; d: N }> = (["a", "b", "c"] as const)[RANDOM]
+nk = "d" // エラー: d は代入不可
+
+// 再帰的な Partial, Readonly, Writable - Writable は type-fest に存在する。 PartialDeep, ReadonlyDeep, WritableDeep も type-fest に存在する
+type RecursivePartial<T> = { [P in keyof T]?: RecursivePartial<T[P]> }
+const rp: RecursivePartial<{ a: { b: D } }> = { a: {} } // OK
+if (rp.a != null) rp.a.b = { getTime: () => 0 } // エラーにならない！ type-fest:PartialDeep は対策されている
+
+type Immutable<T> = { readonly [P in keyof T]: Immutable<T[P]> } // type-fest:ReadonlyDeep にほぼ同じ
+type Mutable<T> = { -readonly [P in keyof T]: Mutable<T[P]> } // type-fest:WritableDeep にほぼ同じ
+
+// 厳密なOmit: type-fest:Exceptとほぼ同じ
+type StrictOmit<T, K extends keyof T> = Omit<T, K>
+
+// Promise<T> 型から T 型 を取り出す - 組み込みのAwaitedを使おう
+type ExtractPromise<T> = T extends PromiseLike<infer U> ? U : never
+const ep: ExtractPromise<Promise<"foobar">> = "foobar"
+
+// 非同期関数の戻り値の型 Promise<T> 型 から T 型 を取り出す - type-fest の AsyncReturnType を使おう
+type GetAsyncReturnType<T extends (...args: any[]) => Promise<any>> = ExtractPromise<ReturnType<T>>
+const gar: GetAsyncReturnType<() => Promise<"foobar">> = "foobar"
+
+///
+///
 /// type-fest (npm install type-fest)
 ///
 ///
