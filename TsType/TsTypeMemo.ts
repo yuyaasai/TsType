@@ -132,6 +132,64 @@ const RANDOM = Math.random()
 
 ///
 ///
+/// [組み込み型のユーティリティ型](https://www.typescriptlang.org/docs/handbook/utility-types.html)
+///
+///
+
+// NonNullable<T> = T & {}
+const b001: NonNullable<S | U | null> = ""
+// Partial<T> = { [P in keyof T]?: T[P] }
+const b002: Partial<{ a: S; b: { c: N } }> = {} // { a?: S; b?: { c: N } }
+// Required<T> = { [P in keyof T]-?: T[P] }
+const b003: Required<{ d?: { e?: N } }> = { d: {} }
+// Readonly<T> = { readonly [P in keyof T]: T[P] }
+const b004: Readonly<{ f: N }> = { f: 1 }
+// Record<K extends keyof any, T> = { [P in K]: T } - propertyの型を指定したT型にする
+//   { [P in K]: T } は mapped (object) type という
+//   ※ { [key: P]: T } は index signature parameter type で別物
+const b005: Record<S, N> = { a: 1, b: 2, c: "3" } // エラー: c が number ではない
+const b006: Record<1 | "a", S[]> = { 1: ["0"], a: ["A"] } // 1 も "a" も省略不可 (Partialで囲めば可)
+// Pick<T, K extends keyof T> = { [P in K]: T[P] } - Tのプロパティから K で指定したのプロパティを抽出
+const b007: Pick<{ a: N; b: N; c: N }, "b" | "c"> = { b: 1, c: 2 } // OK: a は指定不可
+// Exclude<T, U> = T extends U ? never : T - (union型の)Tから(union型の)Uを除去
+const b008: Exclude<S | N | D | U, D | U> = "D と U が除去され string | number になる"
+// Omit<T, K extends keyof any> = Pick<T, Exclude<keyof T, K>> - type-fest:Except はこれの厳密版
+const b009: Omit<{ a: N; b: N }, "b" | "c"> = { a: 1 } // OK: b は指定不可 ("c" は存在しないため無視される。type-fest:Except を使うとエラーになる)
+// Extract<T, U> = T extends U ? T : never - Union型をインターセクト
+const b010: Extract<S | N | B, N | B | D> = ([1, true] as const)[RANDOM] // OK: number | boolean 型
+// ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : any
+const b011: ReturnType<() => S | N> = ([1, ""] as const)[RANDOM] // OK: string | number 型
+// Parameters<T extends (...args: any) => any> = T extends (...args: infer P) => any ? P : never - 関数の引数の型をタプルとして取得
+const b012: Parameters<(a: S, b: N) => void> = ["", 1] // OK: [string, number] 型
+const b013: Parameters<(a: S, b: N) => void> = [1, ""] // エラー
+// Awaited<T>: (ネストされた) Promise型から結果の型を取り出す
+const b014: Awaited<Promise<N>> = 1 // OK: number 型
+const b015: Awaited<Promise<Promise<S>>> = "" // OK: string 型
+const b016: Awaited<S> = "" // OK: string 型
+
+class Foo {
+    d: S
+    n: N
+    constructor(d: S, n: N) {
+        this.d = d
+        this.n = n
+    }
+}
+// ConstructorParameters<T extends abstract new (...args: any) => any> = T extends abstract new (...args: infer P) => any ? P : never
+const ctp: ConstructorParameters<typeof Foo> = ["", 1]
+// InstanceType<T extends abstract new (...args: any) => any> = T extends abstract new (...args: any) => infer R ? R : any
+const objType: InstanceType<typeof Foo> = { d: "", n: 1 }
+
+/*
+ * Intrinsic String Manipulation Types (TypeScript 4.1以降)
+ */
+const FOOBAR: Uppercase<"foo bar"> = "FOO BAR"
+const foobar: Lowercase<"FOO BAR"> = "foo bar"
+const FooBAr: Capitalize<"foo bar"> = "Foo bar" // 最初の文字 "f" だけ大文字に (途中の空白があっても先頭だけ)
+const fOObAR: Uncapitalize<"FOO BAR"> = "fOO BAR" // 最初の文字 "F" だけ小文字に
+
+///
+///
 /// type-fest (npm install type-fest)
 ///
 ///
