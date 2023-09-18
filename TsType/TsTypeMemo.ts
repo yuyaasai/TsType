@@ -132,6 +132,158 @@ const RANDOM = Math.random()
 
 ///
 ///
+/// TypeScript の学習メモ
+///   型の学習は [type-challenges](https://github.com/type-challenges/type-challenges/blob/main/README.ja.md) が便利
+///
+///
+
+/*
+ * [Conditional Types](https://www.typescriptlang.org/docs/handbook/2/conditional-types.html)
+ *   条件付き型 - L extends R ? T : F という構文は R が L に代入可能であれば T そうでなければ F という意味
+ */
+
+// T1 extends T2 ? TrueType : FalseType
+//   T2 が T2 に割当可能であるときは TrueType となる
+const a: S extends S | N ? "y" : "n" = "y"
+const b: S | N extends S ? "y" : "n" = "n"
+const c: { s: S; u: N } extends { s: S } ? "y" : "n" = "y"
+const d: { s: S } extends { s: S; u: N } ? "y" : "n" = "n"
+
+/* Conditional Type Constraints */
+//   T は messageプロパティを持つが型は任意、messageプロパティの型を取り出す
+//   unknown は any でもOK (だけど unknown のほうがいいかも、警告が出ないから)
+//   unknown は any と同様に never 以外は代入可能で、読み取りは any と違い堅い
+type MessageOf<T extends { message: U }> = T["message"]
+const message: MessageOf<{ message: S }> = "string型に解決される"
+
+// message プロパティがない場合は下記のエラーとなる
+//   Type '{ x: any; }' does not satisfy the constraint '{ message: unknown; }'.
+//   Property 'message' is missing in type '{ x: any; }' but required in type '{ message: unknown; }'.
+const noMessage: MessageOf<{ x: any }> = 0
+
+// message プロパティがない場合にエラーにしたくない場合は下記のようにする
+type MessageOf2<T> = T extends { message: unknown } ? T["message"] : never
+const never: MessageOf2<{}> = "never型に代入不可"
+
+// Flatten
+type Flatten<T> = T extends any[] ? T[number] : T
+type DeepFlatten<T> = T extends any[] ? DeepFlatten<T[number]> : T
+const flatten1: Flatten<[N]> = 0 // number型となる
+const flatten2: Flatten<[N, [N]]> = Math.random() < 0.5 ? 1 : [2] // number | [number] 型となる
+const df: DeepFlatten<[N, [N]]> = 0 // number型となる
+
+/* Inferring Within Conditional Types */
+//   T extends GenericT<infer U> ? U : T
+//     U 型が推論可能であれば U 、そうでなければ T
+type Flatten2<T> = T extends Array<infer U> ? U : T // Flatten と同じ
+
+type Args<T extends (...a: any[]) => unknown> = T extends (...a: infer U) => any ? U : never
+const at: Args<(s: S, n: N) => any> = ["", 1]
+
+type ReturnType<T> = T extends (...args: never[]) => infer Return ? Return : never
+const rt: ReturnType<() => number> = 123
+
+/* Distributive Conditional Types 分散条件型 */
+// 条件型がジェネリック型に作用する場合、共用体型が与えられると、条件型は分散型になる
+type ToArray<T> = T extends unknown ? T[] : never
+const sArrayOrNArray: ToArray<string | number> = [""] // string[] | number[] 型
+
+// これを回避する場合はキーワードを角括弧で囲む
+type ToArray2<T> = [T] extends [unknown] ? T[] : never
+type sOrNError = ToArray2<string | number> // (string | number)[] 型
+
+/*
+ * [Keyof Type Operator](https://www.typescriptlang.org/docs/handbook/2/keyof-types.html)
+ */
+type Abc = { a: S; b: N; c: B }
+type AbcKeys = keyof Abc // "a" | "b" | "c"
+const abcKeys: AbcKeys[] = ["a", "b", "c", "c"]
+const abcValues: Array<Abc[AbcKeys]> = ["", 1, 2, 3, true, false]
+
+/*
+ * [Indexed Access Types](https://www.typescriptlang.org/docs/handbook/2/indexed-access-types.html)
+ */
+type Def = { d?: S; e?: N; f?: B }
+const defD: Def["d"] = "" // X 型のプロパティ s の型を取得、つまり S 型
+const defEF: Def["e" | "f"] = [undefined, 1, true][RANDOM]
+
+/*
+ * [Mapped Types](https://www.typescriptlang.org/docs/handbook/2/mapped-types.html)
+ */
+const numMappedType: keyof { [key: N]: S } = 123 // number
+const strMappedType: Array<keyof { [key: S]: S }> = ["", 0] // number or string
+const symMappedType: keyof { [key: symbol]: S } = Symbol("x") // symbol
+
+/* Mapping Modifiers: マッピング修飾子により readonly を付与/削除 したり optional/required に変更したりできる */
+let inKeyof: { readonly [P in keyof Def]-?: Def[P] } = {} // -? によりオプショナルではなくなっているためエラー
+inKeyof.b = true // readonlyにより代入できないためエラー: Cannot assign to 'b' because it is read-only property
+
+// keyof T の型は PropertyKey 型であるため、PropertyKey には string | number | symbol が代入可能
+//   だが文字列だけに絞り込みたいときは keyof T & string とすると良い
+const strKeyOf1: keyof string = ([1, Symbol.iterator] as const)[RANDOM]
+const strKeyof2: keyof string & string = 1 // エラー: number や symbol は代入不可
+
+// Required (type Required<T> = { [P in keyof T]-?: T[P] }) と undefined の挙動
+//   a と c は string 型しか受け入れられないためエラーとなる。
+//   b が undefined を代入できるのに c が undefined を代入できないのが分かりにくい
+const ru: Required<{ a?: S; b: S | U; c?: S | U }> = { a: undefined, b: undefined, c: undefined }
+
+// Partial (type Partial<T> = { [P in keyof T]?: T[P] }) と undefined の挙動
+//   a も b も c も undefined を代入できる
+const ou: Partial<{ a: S; b: S | U; c: S | null }> = { a: undefined, b: undefined, c: undefined }
+
+/*
+ * as による キーの再マッピング
+ */
+type Getters<T> = { [P in keyof T as `get${Capitalize<string & P>}`]: () => T[P] }
+const getters: Getters<Def> = { getD: () => "" }
+
+type EventConfig<Events extends { kind: string }> = {
+    [E in Events as E["kind"]]: (event: E) => void
+}
+type SquareEvent = { kind: "square"; x: number; y: number }
+type CircleEvent = { kind: "circle"; radius: number }
+const config: EventConfig<SquareEvent | CircleEvent> = {
+    square: (e: SquareEvent) => {},
+    circle: (e: CircleEvent) => {}
+}
+
+/*
+ * [Template Literal Types](https://www.typescriptlang.org/docs/handbook/2/template-literal-types.html)
+ */
+type PropEventSource<Type> = {
+    on: <Key extends string & keyof Type>(
+        eventName: `${Key}Changed`,
+        callback: (newValue: Type[Key]) => void
+    ) => void
+}
+declare function makeWatchedObject<Type>(obj: Type): Type & PropEventSource<Type>
+const person = makeWatchedObject({ name: "ceo", age: 26 })
+person.on("ageChanged", (newValue: N) => {})
+person.on("nameChanged", (newValue: N) => {}) // newValue は N 型であるためエラー
+
+/*
+ * never による網羅性のチェック
+ */
+type Animal1 = "dog" | "cat"
+function getCry(a: Animal1) {
+    if (a === "dog") return "wan"
+    if (a === "cat") return "nya-n"
+    const _exhaustiveCheck: never = a // a は never 型に狭められるため静的エラーにならない
+    throw new Error()
+}
+
+type Animal2 = "dog" | "cat" | "bird"
+function getCry2(a: Animal2) {
+    if (a === "dog") return "wan"
+    if (a === "cat") return "nya-n"
+    // a は "bird" 型に狭められるため静的エラーとなる
+    const _exhaustiveCheck: never = a // エラー: Type 'string' is not assignable to type 'never'
+    throw new Error()
+}
+
+///
+///
 /// [組み込み型のユーティリティ型](https://www.typescriptlang.org/docs/handbook/utility-types.html)
 ///
 ///
@@ -219,6 +371,39 @@ const ep: ExtractPromise<Promise<"foobar">> = "foobar"
 // 非同期関数の戻り値の型 Promise<T> 型 から T 型 を取り出す - type-fest の AsyncReturnType を使おう
 type GetAsyncReturnType<T extends (...args: any[]) => Promise<any>> = ExtractPromise<ReturnType<T>>
 const gar: GetAsyncReturnType<() => Promise<"foobar">> = "foobar"
+
+///
+///
+/// その他、Tips
+///
+///
+
+// `& object` により、型がオブジェクトであることを保証する
+const maybeObj: { length: number } = "" // リテラルが代入できてしまう
+const mustObj: { length: number } & object = "" // これはエラーになるので期待通り
+
+///
+///
+/// TypeScript の新機能で型に関するもの
+///
+///
+
+// 3.7: asserts - **戻り値なしの関数** が正常終了した (throwしない) 場合、引数の型がその型であると見なす (is と似ている)
+//      arrow function で書くとエラーになるので注意
+function assertTest(v: unknown): asserts v is string {
+    if (typeof v !== "string") throw new Error(`v must be string`)
+}
+const assertTestVal: unknown = "VALUE"
+assertTest(assertTestVal)
+assertTestVal.at(0) // string 型として扱える
+
+// 4.9: satisfies - 宣言時の型を指定しつつ、型推論の結果が実際の型として残る
+const regExpDesc = {
+    test: "引数が正規表現にマッチするかテスト"
+} satisfies { [K in keyof RegExp]?: string }
+regExpDesc.test.at(0) // satisfies で指定した型では test?: string だが、型推論の結果が残っているため test: string となる (string | undefined ではない)
+regExpDesc.exec.at(0) // エラー: Property 'exec' does not exist on type '{ test: string; flags: string; }'
+regExpDesc.flags = "エラー: 型推論時に存在しないプロパティを後から追加できない"
 
 ///
 ///
