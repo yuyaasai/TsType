@@ -123,6 +123,74 @@ import type {
     WritableKeysOf
 } from "type-fest"
 
+/*
+### [【TypeScript】Utility Typesをまとめて理解する - Qiita](https://qiita.com/k-penguin-sato/items/e2791d7a57e96f6144e5)
+まだ使い方調べていない
+ThisParameterType
+OmitThisParameter
+ThisType<T>
+### ChatGPT に聞いたカスタムユーティリティ型 (未検証)
+ReadonlyArray<T>: 配列の要素を読み取り専用にします。
+ReadonlyMap<K, V>: マップの要素を読み取り専用にします。
+ReadonlySet<T>: セットの要素を読み取り専用にします。
+InferType<T>: 条件型内で使用され、型 T から推論可能な型を取得します。
+NonOptional<T>: 型 T からオプショナルなプロパティを除去します。
+Defined<T>: 型 T から undefined を除去します。
+TupleOf<T, N extends number>: 長さ N のタプル型を作成します。その各要素は型 T です。
+AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }>: 型 T の少なくとも1つのプロパティが存在することを保証します。
+type AtLeastOne<T, U = { [K in keyof T]: Pick<T, K> }> = Partial<T> & U[keyof U];
+RequireAtLeastOne<T, Keys extends keyof T = keyof T>: 型 T のうち指定されたキー Keys のうち少なくとも1つが存在することを保証します。
+type RequireAtLeastOne<T, Keys extends keyof T = keyof T> =
+  Pick<T, Exclude<keyof T, Keys>>
+  & {
+       [K in Keys]-?: Required<Pick<T, K>> & Partial<Pick<T, Exclude<Keys, K>>>
+     }[Keys]
+UnionToIntersection<U>: ユニオン型 U を交差型に変換します。
+type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends ((k: infer I) => void) ? I : never;
+Values<T>: 型 T のすべてのプロパティ値の型を取得します。
+type Values<T> = T[keyof T];
+OptionalKeys<T>: 型 T の中でオプショナルなプロパティのキーのみを抽出します。
+type OptionalKeys<T> = { [K in keyof T]: T extends { [P in K]: T[K] } ? never : K }[keyof T];
+RequiredKeys<T>: 型 T の中で必須のプロパティのキーのみを抽出します。
+type RequiredKeys<T> = { [K in keyof T]: T extends { [P in K]: T[K] } ? K : never }[keyof T];
+NonFunctionKeys<T>: 型 T の中で関数でないプロパティのキーのみを抽出します。
+type NonFunctionKeys<T> = { [K in keyof T]: T[K] extends Function ? never : K }[keyof T];
+FunctionKeys<T>: 型 T の中で関数であるプロパティのキーのみを抽出します。
+type FunctionKeys<T> = { [K in keyof T]: T[K] extends Function ? K : never }[keyof T];
+Getters<T>: 型 T の中で関数であるプロパティの戻り値の型を取得します。
+type Getters<T> = { [K in FunctionKeys<T>]: ReturnType<T[K]> };
+Setters<T>: 型 T の中で関数であるプロパティの引数の型を取得します。
+type Setters<T> = { [K in FunctionKeys<T>]: Parameters<T[K]>[0] };
+ElementType<T>: 配列型 T の要素の型を取得します。
+type ElementType<T> = T extends (infer U)[] ? U : never;
+ArgumentType<F>: 関数型 F の最初の引数の型を取得します。
+type ArgumentType<F> = F extends (arg: infer A) => any ? A : never;
+Proxify<T>: 型 T の各プロパティをプロキシ化します（各プロパティが関数であることを想定）。
+type Proxify<T> = {
+  [P in keyof T]: (...args: any[]) => Promise<ReturnType<T[P]>>
+};
+Flatten<T>: 入れ子になったオブジェクト型 T を平らな型に変換します。
+type Flatten<T> = { [P in keyof T]: T[P] extends infer U ? U extends object ? Flatten<U> : U : never };
+
+Expand<T>: 型 T を再帰的に展開します。これは交差型やユニオン型をより具体的な型に展開するのに有用です。
+type Expand<T> = T extends infer O ? { [K in keyof O]: O[K] } : never;
+NoInfer<T>: 型 T を推論から除外します。これは条件型の中で特定の型の推論を防ぐのに有用です。
+type NoInfer<T> = [T][T extends any ? 0 : never];
+Merge<T, U>: 型 T と U をマージします。U のプロパティは T のプロパティを上書きします。
+type Merge<T, U> = Omit<T, keyof U> & U;
+MarkOptional<T, K extends keyof T>: 型 T の中で指定されたキー K のプロパティをオプショナルにします。
+type MarkOptional<T, K extends keyof T> = Omit<T, K> & Partial<Pick<T, K>>;
+MarkRequired<T, K extends keyof T>: 型 T の中で指定されたキー K のプロパティを必須にします。
+type MarkRequired<T, K extends keyof T> = Omit<T, K> & Required<Pick<T, K>>;
+
+ReadonlyKeys<T>: 型 T の中で読み取り専用のプロパティのキーのみを抽出します。
+type ReadonlyKeys<T> = { [K in keyof T]: IfEquals<{ -readonly [Q in K]: T[K] }, { [Q in K]: T[K] }, never, K> }[keyof T];
+WritableKeys<T>: 型 T の中で書き込み可能なプロパティのキーのみを抽出します。
+type WritableKeys<T> = { [K in keyof T]: IfEquals<{ -readonly [Q in K]: T[K] }, { [Q in K]: T[K] }, K, never> }[keyof T];
+ConditionalKeys<T, Condition>: 条件型 Condition に一致する型 T のキーを抽出します。
+type ConditionalKeys<T, Condition> = NonNullable<{ [K in keyof T]: T[K] extends Condition ? K : never }[keyof T]>;
+*/
+
 type S = string
 type N = number
 type B = boolean
