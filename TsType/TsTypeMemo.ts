@@ -2,6 +2,8 @@
 import type {
     AbstractClass,
     AbstractConstructor,
+    ArrayIndices,
+    ArrayValues,
     AsyncReturnType,
     Asyncify,
     CamelCase,
@@ -30,6 +32,7 @@ import type {
     HasRequiredKeys,
     HasWritableKeys,
     Includes,
+    IntRange,
     Integer,
     InvariantOf,
     IsAny,
@@ -53,6 +56,7 @@ import type {
     KebabCase,
     KebabCasedProperties,
     KebabCasedPropertiesDeep,
+    KeysOfUnion,
     LastArrayElement,
     LiteralToPrimitive,
     LiteralToPrimitiveDeep,
@@ -96,6 +100,7 @@ import type {
     ScreamingSnakeCase,
     SetNonNullable,
     SetOptional,
+    SetParameterType,
     SetReadonly,
     SetRequired,
     SetReturnType,
@@ -113,6 +118,7 @@ import type {
     TsConfigJson,
     TupleToUnion,
     TypedArray,
+    UndefinedOnPartialDeep,
     UnionToIntersection,
     UnknownRecord,
     UnwrapOpaque,
@@ -610,6 +616,11 @@ const pd1: PartialDeep<{ a: D; b: { c: N } }> = {}
 const pd3: PartialDeep<{ a: D; b: { c: N } }> = { a: undefined } // undefined が付与されるので注意
 const pd2: PartialDeep<{ a: D; b: { c: N } }> = { b: {} }
 
+// UndefinedOnPartialDeep: オプショナルプロパティの型に undefined を追加するバージョンの PartialDeep
+// ※exactOptionalPropertyTypes が false のときは PartialDeep と同じ
+const upd1: UndefinedOnPartialDeep<{ a?: N }> = { a: undefined } // PartialDeep だとエラーになる
+const udp2: UndefinedOnPartialDeep<{ a: N }> = { a: undefined } // エラー: a は optional ではないので undefined は指定不可
+
 // PartialOnUndefinedDeep: 再帰的に、オプショナルプロパティまたはundefinedを含むユニオン型を
 //   オプショナルプロパティかつundefinedを含むユニオン型に変換する。難しいな。
 let pud: PartialOnUndefinedDeep<{ a: { b?: N; c: N | U; d: N } }> = {} // エラー: a はそのまま！
@@ -721,6 +732,9 @@ const entry: Entry<Map<S, N>> = ["", 1]
 // SetReturnType<Fn extends (...args_: any[]) => any, TypeToReturn>: 関数の戻り値型を違う型にする
 const setReturnType: SetReturnType<typeof isNaN, S> = (num: number) => ""
 
+// SetParameterType<Fn>: 関数の引数の型を変更する (戻り値はそのまま)
+const spt: SetParameterType<(a: S, b: N) => B, { 0: D; 1: RegExp }> = (a: D, b: RegExp) => true
+
 // Simplify<T>: エディタで表示される型ヒントをシンプルにして見やすくする
 const simplify: Simplify<{ a?: N; b?: S } & { c?: B; d?: D }> = {} // 変数にマウスを合わせるとシンプルになっている
 
@@ -729,6 +743,12 @@ const get: Get<{ a: { b: Array<{ c: N }> } }, "a.b[0].c"> = [1, undefined][RANDO
 
 // StringKeyOf<Base>: オブジェクトのキーを文字列のユニオン型で取得
 const stringKeyOf: StringKeyOf<{ a: N; 1: S }> = (["a", "1"] as const)[RANDOM]
+
+// KeysOfUnion: 全てのユニオンメンバーに存在するキーを返す keyof とは異なり、この型は全てのメンバのキーを返す
+const kou: KeysOfUnion<{ a: N; b: S } | { b: N; c: S }> = (["a", "b", "c"] as const)[RANDOM] // typeof の場合は "b" のみ代入可能
+
+// IntRange<fromInclusive, toExclusive, step = 1>: fromInclusive から toExclusive まで step ずつ増加する数値のユニオン型を生成する
+const ir: IntRange<1, 6, 2> = ([1, 3, 5] as const)[RANDOM] // 1 | 2 | 3 型
 
 // Schema<Obj, Value>: オブジェクトのキーを再帰的に、別の型に置き換える
 // プロパティ値が再帰的に指定された値型に置き換えられる、別のオブジェクト型のディープ・バージョンを作成します。
@@ -903,6 +923,11 @@ const lastArrayElement: LastArrayElement<[S, D, B | N]> = ([true, 0] as const)[R
 // FixedLengthArray<T, Length>: 固定長の配列を作成
 const fixedLengthArray: FixedLengthArray<N, 2> = [1, 2] // OK: 要素数が1や3だとエラーになる
 fixedLengthArray.push(3) // エラー: 要素の数が変わるメソッドはエラーになる (実行時には存在するけど)
+// ArrayValues<T extends readonly unknown[]> = T[number]: 配列要素のリテラル型を取得
+// ArrayIndices: 配列の添字に指定可能な数値のユニオン型を取得
+const v460Arr = ["a", "bb", "ccc"] as const
+const avs: ArrayValues<typeof v460Arr> = (["a", "bb", "ccc"] as const)[RANDOM]
+const ais: ArrayIndices<typeof v460Arr> = ([0, 1, 2] as const)[RANDOM]
 // MultidimensionalArray<T, Dimensions extends N>: 多次元配列型
 const multidimensionalArray: MultidimensionalArray<S, 4> = [[[["foo"]]]] // number[][][][]
 multidimensionalArray[0][0][0].push("bar")
